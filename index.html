@@ -90,10 +90,32 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(440px) rotate(360deg);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .kpi-row,.charts-row,.matrix-card{animation:fadeUp .4s ease forwards;}
+  /* === ESTILOS NUEVOS PARA CUMPLE / NO CUMPLE === */
+.btn-eval {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ghk);
+  background: white;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  margin-right: 5px;
+  transition: all 0.2s;
+}
+.btn-eval.activo-cumple {
+  background: #27ae60;
+  color: white;
+  border-color: #27ae60;
+}
+.btn-eval.activo-nocumple {
+  background: #e74c3c;
+  color: white;
+  border-color: #e74c3c;
+}
 </style>
 </head>
 <body>
-
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
