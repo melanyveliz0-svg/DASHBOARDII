@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Auditoría | GHK</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+:root{--ghk:#E66E0A;--ghk-light:#ff8c2e;--ghk-dark:#b85508;--ghk-muted:rgba(230,110,10,0.10);--bg:#f7f3ee;--surface:#ffffff;--surface2:#f2ede6;--border:rgba(180,130,80,0.18);--border-strong:rgba(230,110,10,0.30);--text:#281e12;--text-muted:#7a6a56;--text-dim:#b8a898;--shadow-card:0 4px 24px rgba(100,60,10,0.07);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.header{background:#fff;border-bottom:3px solid var(--ghk);padding:0 36px;height:68px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(100,60,10,0.08);}
+.header-brand{display:flex;align-items:center;gap:14px;}
+.header-title h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--text);line-height:1;}
+.header-title span{font-size:11px;color:var(--ghk);letter-spacing:2.5px;text-transform:uppercase;font-weight:500;}
+.header-badge{background:var(--ghk-muted);border:1.5px solid var(--ghk);border-radius:20px;padding:5px 16px;font-size:11px;font-weight:700;color:var(--ghk-dark);letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.main{padding:28px 36px;max-width:1600px;margin:0 auto;}
+.section-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--ghk);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-label::before{content:'';display:block;width:20px;height:2px;background:var(--ghk);border-radius:2px;}
+.kpi-row{display:grid;grid-template-columns:200px 1fr 290px;gap:16px;margin-bottom:28px;align-items:stretch;}
+.kpi-card-total{background:linear-gradient(145deg,#fff8f2,#fff2e6);border:2px solid var(--ghk);border-radius:16px;padding:26px 24px;box-shadow:0 4px 20px rgba(230,110,10,0.12);}
+.kpi-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;font-weight:600;}
+.kpi-value{font-family:'Barlow Condensed',sans-serif;font-size:54px;font-weight:800;color:var(--ghk);line-height:1;}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:7px;}
+.kpi-selector-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:var(--shadow-card);}
+.kpi-selector-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);font-weight:600;}
+.kpi-selector-inner{position:relative;}
+.kpi-area-select{appearance:none;width:100%;background:var(--surface2);border:1.5px solid var(--border-strong);border-radius:10px;padding:13px 44px 13px 18px;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--text);cursor:pointer;transition:border-color .2s,box-shadow .2s;}
+.kpi-area-select:focus{outline:none;border-color:var(--ghk);box-shadow:0 0 0 3px rgba(230,110,10,.12);}
+.kpi-selector-inner::after{content:'▾';position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--ghk);font-size:16px;pointer-events:none;}
+.selector-hint{font-size:11px;color:var(--text-dim);}
+.kpi-gauge-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 18px 12px;display:flex;flex-direction:column;align-items:center;box-shadow:var(--shadow-card);}
+.gauge-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:2px;align-self:flex-start;}
+.gauge-area-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--ghk);text-transform:uppercase;align-self:flex-start;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;transition:color .3s;}
+#gaugeCanvas{display:block;}
+.gauge-bottom{display:flex;justify-content:center;align-items:flex-end;width:100%;margin-top:-4px;}
+.gauge-pct-big{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:800;color:var(--ghk);transition:color .3s;text-align:center;line-height:1;}
+.gauge-pct-sub{font-size:10px;color:var(--text-dim);text-align:center;}
+.charts-row{display:grid;grid-template-columns:1fr 1.8fr;gap:20px;margin-bottom:28px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow-card);}
+.chart-card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.chart-card-sub{font-size:12px;color:var(--text-muted);margin-bottom:20px;}
+.bar-wrapper{height:300px;position:relative;}
+.matrix-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:32px;box-shadow:var(--shadow-card);}
+.matrix-header{background:linear-gradient(135deg,#fff5ec,#fff0e0);border-bottom:2px solid var(--ghk);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;}
+.matrix-header-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;}
+.matrix-header-title::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--ghk);flex-shrink:0;}
+.area-tag{background:var(--ghk);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:background .3s;}
+.matrix-table-wrap{overflow-x:auto;max-height:420px;overflow-y:auto;}
+.matrix-table-wrap::-webkit-scrollbar{width:5px;height:5px;}
+.matrix-table-wrap::-webkit-scrollbar-thumb{background:var(--ghk);border-radius:3px;}
+.matrix-table{width:100%;border-collapse:collapse;font-size:13px;}
+.matrix-table thead th{background:var(--surface2);color:var(--ghk-dark);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:12px 18px;text-align:left;position:sticky;top:0;border-bottom:1px solid var(--border);white-space:nowrap;}
+.matrix-table tbody tr{border-bottom:1px solid rgba(0,0,0,0.04);transition:background .12s;}
+.matrix-table tbody tr:hover{background:#fdf6ee;}
+.matrix-table tbody td{padding:13px 18px;color:var(--text);vertical-align:top;line-height:1.5;}
+.matrix-table tbody td:first-child{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:var(--ghk-dark);white-space:nowrap;}
+.pill{display:inline-block;background:#fff3e8;border:1px solid rgba(230,110,10,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--ghk-dark);white-space:nowrap;}
+.row-checked{background:#fff8f2 !important;}
+.footer{border-top:1px solid var(--border);padding:14px 36px;text-align:center;font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;background:var(--surface);}
+
+/* LOGIN */
+#loginScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#f7f3ee,#ffe8d6);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:#fff;border-radius:20px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(100,60,10,0.13);border-top:4px solid #E66E0A;text-align:center;}
+.login-logo{width:80px;height:80px;object-fit:contain;margin-bottom:16px;}
+.login-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#281e12;letter-spacing:1px;margin-bottom:4px;}
+.login-sub{font-size:11px;color:#7a6a56;letter-spacing:2px;text-transform:uppercase;margin-bottom:32px;}
+.login-field{width:100%;padding:13px 16px;border:1.5px solid rgba(180,130,80,0.3);border-radius:10px;font-size:14px;font-family:'Barlow',sans-serif;color:#281e12;background:#f7f3ee;margin-bottom:14px;transition:border-color .2s;outline:none;}
+.login-field:focus{border-color:#E66E0A;box-shadow:0 0 0 3px rgba(230,110,10,0.12);}
+.login-btn{width:100%;padding:14px;background:#E66E0A;color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:background .2s;}
+.login-btn:hover{background:#b85508;}
+.login-error{color:#e74c3c;font-size:12px;margin-top:10px;font-weight:600;display:none;}
+/* LOGOUT CONFIRM */
+.logout-confirm{position:fixed;top:58px;right:16px;background:#fff;border:1.5px solid #E66E0A;border-radius:12px;padding:12px 16px;box-shadow:0 4px 20px rgba(100,60,10,0.15);z-index:9998;display:none;align-items:center;gap:10px;font-size:12px;color:#281e12;font-weight:600;white-space:nowrap;}
+.logout-confirm-yes{background:#E66E0A;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;}
+.logout-confirm-yes:hover{background:#b85508;}
+.logout-confirm-no{background:#f2ede6;color:#7a6a56;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;}
+/* CELEBRATION */
+#celebrationModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:99999;}
+.celebration-box{background:#fff;border-radius:24px;padding:48px 44px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:popIn .4s cubic-bezier(.22,1,.36,1);position:relative;overflow:hidden;}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.celebration-confetti{font-size:56px;margin-bottom:12px;display:block;}
+.celebration-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:800;color:#E66E0A;margin-bottom:8px;letter-spacing:1px;}
+.celebration-area{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;}
+.celebration-msg{font-size:13px;color:#7a6a56;margin-bottom:24px;line-height:1.6;}
+.celebration-btn{background:#E66E0A;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:background .2s;}
+.celebration-btn:hover{background:#b85508;}
+.celebration-stars{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;}
+.star{position:absolute;width:8px;height:8px;border-radius:50%;animation:fall 2s ease-in infinite;}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(440px) rotate(360deg);opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.kpi-row,.charts-row,.matrix-card{animation:fadeUp .4s ease forwards;}
+
+/* === ESTILOS NUEVOS PARA CUMPLE / NO CUMPLE === */
+.btn-eval {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ghk);
+  background: white;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  margin-right: 5px;
+  transition: all 0.2s;
+}
+.btn-eval.activo-cumple {
+  background: #27ae60;
+  color: white;
+  border-color: #27ae60;
+}
+.btn-eval.activo-nocumple {
+  background: #e74c3c;
+  color: white;
+  border-color: #e74c3c;
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <!-- Ícono temporal de la institución -->
+    <div style="font-size:48px; color:#E66E0A; margin-bottom: 10px;">🏥</div>
+    <div class="login-title">HOSPITAL CLÍNICA KENNEDY</div>
+    <div class="login-sub">Evaluación de Calidad y Seguridad</div>
+    <input class="login-field" id="loginUser" type="text" placeholder="Usuario" autocomplete="off">
+    <div style="position:relative;">
+      <input class="login-field" id="loginPass" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()" style="margin-bottom:0;padding-right:46px;width:100%">
+      <button onclick="togglePass()" type="button" id="togglePassBtn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#7a6a56;font-size:18px;padding:0;">👁️</button>
+    </div>
+    <div style="height:14px"></div>
+    <button class="login-btn" onclick="doLogin()">INGRESAR</button>
+    <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
+  </div>
+</div>
+
+<!-- LOGOUT CONFIRM -->
+<div class="logout-confirm" id="logoutConfirm">
+  ¿Cerrar sesión?
+  <button class="logout-confirm-yes" onclick="confirmLogout()">Sí, salir</button>
+  <button class="logout-confirm-no" onclick="cancelLogout()">Cancelar</button>
+</div>
+
+<!-- CELEBRATION -->
+<div id="celebrationModal" onclick="closeCelebration()">
+  <div class="celebration-box" onclick="event.stopPropagation()">
+    <div class="celebration-stars" id="celebStars"></div>
+    <span class="celebration-confetti">🏆</span>
+    <div class="celebration-title">¡FELICITACIONES!</div>
+    <div class="celebration-area" id="celebAreaName">ÁREA RESUELTA</div>
+    <div class="celebration-msg">¡Han completado el <strong>100%</strong> de sus responsabilidades!<br>Excelente trabajo del equipo. 🎉</div>
+    <button class="celebration-btn" onclick="closeCelebration()">¡Gracias!</button>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-brand">
+    <div style="font-size:24px; color:#E66E0A;">🏥</div>
+    <div class="header-title">
+        <h1>HOSPITAL CLÍNICA KENNEDY</h1>
+        <span>Evaluación de Calidad y Seguridad</span>
+    </div>
+  </div>
+  <div class="header-badge" onclick="document.getElementById('logoutConfirm').style.display='flex'">Salir</div>
+</header>
+
+<main class="main">
+  <div class="section-label">INDICADORES GENERALES</div>
+
+  <!-- TARJETAS PRINCIPALES Y GRAFICO -->
+  <div class="kpi-row">
+    <div class="kpi-card-total">
+      <div class="kpi-label">Puntaje Global</div>
+      <div class="kpi-value" id="kpiTotal">0%</div>
+      <div class="kpi-sub">Resultado consolidado</div>
+    </div>
+    
+    <div class="kpi-selector-card">
+      <div class="kpi-selector-label">Seleccionar Área</div>
+      <div class="kpi-selector-inner">
+        <select class="kpi-area-select">
+          <option>Área de Quirófano</option>
+          <option>Área de Emergencias</option>
+          <option>Cuidados Intensivos</option>
+        </select>
+      </div>
+      <div class="selector-hint">Elija el departamento a auditar</div>
+    </div>
+
+    <div class="kpi-gauge-card">
+      <div class="gauge-title">Cumplimiento Actual</div>
+      <div class="gauge-area-name">Área Seleccionada</div>
+      <!-- Aquí la gráfica dinámica -->
+      <canvas id="gaugeCanvas" width="140" height="140"></canvas>
+      <div class="gauge-bottom">
+        <div class="gauge-pct-big" id="graphPercentage">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DONDE ESTARÁN LOS BOTONES -->
+  <div class="matrix-card">
+    <div class="matrix-header">
+      <div class="matrix-header-title">Matriz de Evaluación</div>
+      <div class="area-tag">Activo</div>
+    </div>
+    <div class="matrix-table-wrap">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Actividad / Protocolo</th>
+            <th>Auditoría (Revisión)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill">01</span></td>
+            <td>Realización de protocolos de limpieza y bioseguridad en áreas críticas</td>
+            <td class="eval-cell">
+              <button class="btn-eval btn-cumple" onclick="marcarEvaluacion(this, true)">Cumple</button>
+              <button class="btn-eval btn-nocumple" onclick="marcarEvaluacion(this, false)">No Cumple</button>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="pill">02</span></td>
+            <td>Verificación del estado y actualización de los carros de paradas</td>
+            <td class="eval-cell">
+              <button class="btn-eval btn-cumple" onclick="marcarEvaluacion(this, true)">Cumple</button>
+              <button class="btn-eval btn-nocumple" onclick="marcarEvaluacion(this, false)">No Cumple</button>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="pill">03</span></td>
+            <td>Comprobación de historias clínicas de acuerdo a los estándares</td>
+            <td class="eval-cell">
+              <button class="btn-eval btn-cumple" onclick="marcarEvaluacion(this, true)">Cumple</button>
+              <button class="btn-eval btn-nocumple" onclick="marcarEvaluacion(this, false)">No Cumple</button>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="pill">04</span></td>
+            <td>Desecho correcto de residuos biopeligrosos en contenedores</td>
+            <td class="eval-cell">
+              <button class="btn-eval btn-cumple" onclick="marcarEvaluacion(this, true)">Cumple</button>
+              <button class="btn-eval btn-nocumple" onclick="marcarEvaluacion(this, false)">No Cumple</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">Dashboard de Auditorias &copy; Hospital Clínica Kennedy</footer>
+
+<!-- LÓGICA DE PROGRAMACIÓN (JAVASCRIPT) -->
+<script>
+// Funciones relacionadas a los menús y modales
+function doLogin() {
+    // Al dar clic en ingresar ocultamos la pantalla de login
+    document.getElementById('loginScreen').style.display = 'none';
+}
+
+function togglePass() {
+    let p = document.getElementById('loginPass');
+    if(p.type === 'password') { p.type = 'text'; } else { p.type = 'password'; }
+}
+
+function cancelLogout() {
+    document.getElementById('logoutConfirm').style.display = 'none';
+}
+
+function confirmLogout() {
+    // Recarga la página como un simulador de cierre de sesión
+    location.reload(); 
+}
+
+function closeCelebration() {
+    document.getElementById('celebrationModal').style.display = 'none';
+}
+
+// INICIAR GRÁFICA GAUGE USANDO CHART.JS
+var ctx = document.getElementById('gaugeCanvas').getContext('2d');
+var miGraficoGauge = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Cumple', 'Faltante'],
+        datasets: [{
+            data: [0, 100], // Inicia en 0% cumple, 100% faltante
+            backgroundColor: ['#27ae60', '#f2ede6'],
+            borderWidth: 0,
+            cutout: '75%'
+        }]
+    },
+    options: {
+        rotation: -90,
+        circumference: 180,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+        }
+    }
+});
+
+// FUNCIÓN MATEMÁTICA PARA CUMPLE Y NO CUMPLE
+function marcarEvaluacion(boton, cumple) {
+  let celda = boton.parentElement;
+  let fila = celda.parentElement;
+  let botonesFila = celda.querySelectorAll('.btn-eval');
+  
+  // Limpia selecciones previas en esa misma fila
+  botonesFila[0].classList.remove('activo-cumple');
+  botonesFila[1].classList.remove('activo-nocumple');
+
+  // Aplica el color nuevo dependiendo del botón pulsado
+  if (cumple) {
+    boton.classList.add('activo-cumple');
+    fila.classList.add('row-checked'); 
+  } else {
+    boton.classList.add('activo-nocumple');
+    fila.classList.remove('row-checked');
+  }
+  
+  // Llama a actualizar la gráfica
+  actualizarGrafico();
+}
+
+function actualizarGrafico() {
+  let totalFilas = document.querySelectorAll('.matrix-table tbody tr').length;
+  let totalCumple = document.querySelectorAll('.activo-cumple').length;
+  
+  // Operación matemática regla de 3
+  let porcentaje = 0;
+  if(totalFilas > 0) {
+     porcentaje = Math.round((totalCumple / totalFilas) * 100);
+  }
+
+  // Actualiza los textos grandes del panel
+  document.getElementById('graphPercentage').innerText = porcentaje + '%';
+  document.getElementById('kpiTotal').innerText = porcentaje + '%';
+
+  // Actualiza los datos de Chart.js
+  miGraficoGauge.data.datasets[0].data = [porcentaje, 100 - porcentaje];
+  miGraficoGauge.update();
+
+  // Activar pantalla de celebración si llega al 100%
+  if(porcentaje === 100) {
+      document.getElementById('celebrationModal').style.display = 'flex';
+  }
+}
+</script>
+
+</body>
+</html>
