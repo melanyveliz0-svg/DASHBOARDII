@@ -281,25 +281,33 @@ function togglePass() {
   else{i.type='password';b.textContent='👁️';}
 }
 function doLogin() {
-  var user=document.getElementById('loginUser').value.trim().toLowerCase();
-  var pass=document.getElementById('loginPass').value;
-  var err=document.getElementById('loginError');
-  if(USERS[user] && USERS[user].pass===pass) {
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('userBadge').innerHTML='👤 '+user.toUpperCase()+' &nbsp;✕';
-    if(USERS[user].area==='ALL') {
-      document.getElementById('masterSelect').disabled=false;
-      document.getElementById('masterSelect').style.opacity='1';
-      onAreaChange('ALL');
+    try {
+    var user = document.getElementById('loginUser').value.trim().toLowerCase();
+    var pass = document.getElementById('loginPass').value;
+    var err = document.getElementById('loginError');
+    console.log("Intentando entrar con:", user); // Esto ayuda a ver errores en consola
+    if(USERS[user] && USERS[user].pass === pass) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('userBadge').innerHTML = '👤 ' + user.toUpperCase() + ' &nbsp;✕';
+      if(USERS[user].area === 'ALL') {
+        document.getElementById('masterSelect').disabled = false;
+        document.getElementById('masterSelect').style.opacity = '1';
+        onAreaChange('ALL');
+      } else {
+        var sel = document.getElementById('masterSelect');
+        sel.value = USERS[user].area; 
+        sel.disabled = true; 
+        sel.style.opacity = '0.7';
+        onAreaChange(USERS[user].area);
+      }
+      err.style.display = 'none';
     } else {
-      var sel=document.getElementById('masterSelect');
-      sel.value=USERS[user].area; sel.disabled=true; sel.style.opacity='0.7';
-      onAreaChange(USERS[user].area);
+      alert("Usuario o contraseña incorrectos. Verifica las mayúsculas.");
+      err.style.display = 'block';
+      document.getElementById('loginPass').value = '';
     }
-    err.style.display='none';
-  } else {
-    err.style.display='block';
-    document.getElementById('loginPass').value='';
+  } catch (e) {
+    alert("Error crítico en el código: " + e.message);
   }
 }
 function showLogoutConfirm() {
