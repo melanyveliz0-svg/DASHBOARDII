@@ -258,6 +258,7 @@ function countByResponsable() {
 }
 
 // ── USERS ─────────────────────────────────────────────────────
+// ── CONFIGURACIÓN DE USUARIOS ─────────────────
 var USERS = {
   'admin':         {pass:'GHK@admin2026', area:'ALL'},
   'clinicos':      {pass:'Clin@2026',     area:'CLINICOS'},
@@ -270,65 +271,49 @@ var USERS = {
   'proveeduria':   {pass:'Prov@2026',     area:'PROVEEDURÍA'},
   'servicios':     {pass:'Serv@2026',     area:'SERVICIOS GENERALES'}
 };
-
-// ── CHECKBOX STATE ────────────────────────────────────────────
 var checkState = {};
-
-// ── LOGIN ─────────────────────────────────────────────────────
+// ── SISTEMA DE ACCESO ──────────────────────────
 function togglePass() {
   var i=document.getElementById('loginPass'), b=document.getElementById('togglePassBtn');
   if(i.type==='password'){i.type='text';b.textContent='🙈';}
   else{i.type='password';b.textContent='👁️';}
 }
 function doLogin() {
-    try {
-    var user = document.getElementById('loginUser').value.trim().toLowerCase();
-    var pass = document.getElementById('loginPass').value;
-    var err = document.getElementById('loginError');
-    console.log("Intentando entrar con:", user); // Esto ayuda a ver errores en consola
-    if(USERS[user] && USERS[user].pass === pass) {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('userBadge').innerHTML = '👤 ' + user.toUpperCase() + ' &nbsp;✕';
-      if(USERS[user].area === 'ALL') {
-        document.getElementById('masterSelect').disabled = false;
-        document.getElementById('masterSelect').style.opacity = '1';
-        onAreaChange('ALL');
-      } else {
-        var sel = document.getElementById('masterSelect');
-        sel.value = USERS[user].area; 
-        sel.disabled = true; 
-        sel.style.opacity = '0.7';
-        onAreaChange(USERS[user].area);
-      }
-      err.style.display = 'none';
+  var u = document.getElementById('loginUser').value.trim().toLowerCase();
+  var p = document.getElementById('loginPass').value;
+  var err = document.getElementById('loginError');
+  if(USERS[u] && USERS[u].pass === p) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('userBadge').innerHTML = '👤 ' + u.toUpperCase() + ' &nbsp;✕';
+    var area = USERS[u].area;
+    if(area === 'ALL') {
+      document.getElementById('masterSelect').disabled = false;
+      document.getElementById('masterSelect').style.opacity = '1';
+      onAreaChange('ALL');
     } else {
-      alert("Usuario o contraseña incorrectos. Verifica las mayúsculas.");
-      err.style.display = 'block';
-      document.getElementById('loginPass').value = '';
+      var sel = document.getElementById('masterSelect');
+      sel.value = area; 
+      sel.disabled = true; 
+      sel.style.opacity = '0.7';
+      onAreaChange(area);
     }
-  } catch (e) {
-    alert("Error crítico en el código: " + e.message);
+    err.style.display = 'none';
+  } else {
+    alert("Acceso denegado. Verifica el usuario y clave.");
+    err.style.display = 'block';
   }
 }
-function showLogoutConfirm() {
-  var c=document.getElementById('logoutConfirm');
-  c.style.display=c.style.display==='flex'?'none':'flex';
-}
 function confirmLogout() {
-  document.getElementById('logoutConfirm').style.display='none';
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('userBadge').innerHTML='AUDITORÍA 2026';
-  var sel=document.getElementById('masterSelect');
-  sel.disabled=false; sel.style.opacity='1';
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('userBadge').innerHTML = 'AUDITORÍA 2026';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
 }
 function cancelLogout() { document.getElementById('logoutConfirm').style.display='none'; }
 document.addEventListener('click', function(e) {
   var c=document.getElementById('logoutConfirm'), b=document.getElementById('userBadge');
   if(c&&b&&!c.contains(e.target)&&!b.contains(e.target)) c.style.display='none';
 });
-
 // ── GAUGE (Peso por Área) ─────────────────────────────────────
 var gaugeAnim=null, gaugeCurrent=0;
 function drawGauge(pct, color) {
