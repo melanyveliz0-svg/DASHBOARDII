@@ -396,6 +396,9 @@ function onAreaChange(area) {
   const areaTotal = area === 'ALL' ? TOTAL : (counts[area] || 0);
   const weightPct = TOTAL > 0 ? (areaTotal / TOTAL) * 100 : 0;
   
+  const kpiTotal = document.getElementById('kpiTotal');
+  if(kpiTotal) kpiTotal.textContent = areaTotal;
+
   if(gPct) {
     gPct.textContent = weightPct.toFixed(1) + '%';
     gPct.style.color = color;
