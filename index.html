@@ -398,19 +398,39 @@ function drawWeightGauge(pct, color) {
 
 function downloadReport() {
   let csv = '\ufeff'; // BOM for Excel UTF-8
+  
+  // 1. Executive Summary Table
+  csv += '--- RESUMEN EJECUTIVO DE AUDITORÍA ---\n';
+  csv += 'ÁREA,CUMPLIMIENTO %,CUMPLE,NO CUMPLE,N/A,PENDIENTE,TOTAL\n';
+  
+  const areas = {};
+  validData.forEach(d => {
+    if(!areas[d.responsable]) areas[d.responsable] = { c:0, nc:0, na:0, p:0, t:0 };
+    let key = d.practica + '|' + d.parametro;
+    let val = checkState[key] || '';
+    areas[d.responsable].t++;
+    if(val === 'C') areas[d.responsable].c++;
+    else if(val === 'NC') areas[d.responsable].nc++;
+    else if(val === 'NA') areas[d.responsable].na++;
+    else areas[d.responsable].p++;
+  });
+
+  Object.entries(areas).forEach(([name, s]) => {
+    let base = s.c + s.nc;
+    let pct = base > 0 ? (s.c / base) * 100 : 0;
+    csv += `"${name}",${pct.toFixed(1)}%,${s.c},${s.nc},${s.na},${s.p},${s.t}\n`;
+  });
+  
+  csv += '\n\n';
+  
+  // 2. Detailed Data
+  csv += '--- DETALLE MAESTRO DE EVALUACIÓN ---\n';
   csv += 'AREA,PRACTICA,PARAMETRO,EVIDENCIA,ESTADO\n';
   validData.forEach(d => {
     let key = d.practica + '|' + d.parametro;
     let val = checkState[key] || '';
     let status = val === 'C' ? 'CUMPLE' : (val === 'NC' ? 'NO CUMPLE' : (val === 'NA' ? 'N/A' : 'PENDIENTE'));
-    
-    let row = [
-      `"${d.responsable}"`,
-      `"${d.practica}"`,
-      `"${d.parametro.replace(/"/g, '""')}"`,
-      `"${(d.evidencia || '').replace(/"/g, '""')}"`,
-      `"${status}"`
-    ];
+    let row = [`"${d.responsable}"`,`"${d.practica}"`,`"${d.parametro.replace(/"/g, '""')}"`,`"${(d.evidencia || '').replace(/"/g, '""')}"`,`"${status}"`];
     csv += row.join(',') + '\n';
   });
   
