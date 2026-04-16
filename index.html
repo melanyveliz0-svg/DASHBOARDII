@@ -479,19 +479,32 @@ function renderMatrix(areaFilter) {
   if(!tbody) return;
   tbody.innerHTML = '';
   var filtered = areaFilter === 'ALL' ? validData : validData.filter(d => d.responsable === areaFilter);
+  
   filtered.forEach(d => {
     var key = d.practica + '|' + d.parametro;
     var val = checkState[key] || ''; 
     var tr = document.createElement('tr');
+    
+    // Usamos variables de texto seguro para el HTML
+    var btnC = `<button class="btn-eval ${val==='C'?'active-cumple':''}" data-key="${encodeURIComponent(key)}" data-val="C">CUMPLE</button>`;
+    var btnNC = `<button class="btn-eval ${val==='NC'?'active-nocumple':''}" data-key="${encodeURIComponent(key)}" data-val="NC">NO CUMPLE</button>`;
+    var btnNA = `<button class="btn-eval ${val==='NA'?'active-na':''}" data-key="${encodeURIComponent(key)}" data-val="NA">N/A</button>`;
+
     tr.innerHTML = `
       <td>${d.practica}</td>
       <td>${d.parametro}</td>
       <td>${d.evidencia || '—'}</td>
-      <td><div class="eval-cell">
-        <button class="btn-eval ${val==='C'?'active-cumple':''}" onclick="setEval('${key}','C')">CUMPLE</button>
-        <button class="btn-eval ${val==='NC'?'active-nocumple':''}" onclick="setEval('${key}','NC')">NO CUMPLE</button>
-        <button class="btn-eval ${val==='NA'?'active-na':''}" onclick="setEval('${key}','NA')">N/A</button>
-      </div></td>`;
+      <td><div class="eval-cell">${btnC}${btnNC}${btnNA}</div></td>`;
+    
+    // Delegar el evento de clic de forma segura para evitar problemas con comillas
+    tr.querySelectorAll('button').forEach(btn => {
+      btn.onclick = function() {
+        var k = decodeURIComponent(this.getAttribute('data-key'));
+        var v = this.getAttribute('data-val');
+        setEval(k, v);
+      };
+    });
+    
     tbody.appendChild(tr);
   });
 }
@@ -579,21 +592,19 @@ firebase.initializeApp({
 });
 window.CHECKS_REF = firebase.database().ref('checkState');
 window.CHECKS_REF.on('value', function(snapshot) {
-  var saved = snapshot.val();
+  const saved = snapshot.val();
+  console.log("Datos sincronizados desde Nube");
   if (saved) {
     checkState = saved;
-    // Sincronizar local también
     localStorage.setItem('ghk_progress', JSON.stringify(checkState));
-    var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-    onAreaChange(sel);
   } else {
-    // Si no hay nada en nube, intentar recuperar del local
     const localData = localStorage.getItem('ghk_progress');
-    if(localData) {
-      checkState = JSON.parse(localData);
-      onAreaChange('ALL');
-    }
+    if(localData) checkState = JSON.parse(localData);
   }
+  const sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
+  onAreaChange(sel);
+}, function(error) {
+  console.error("Error de Firebase:", error);
 });
 </script>
 </body>
