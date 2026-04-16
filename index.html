@@ -107,7 +107,24 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 }
 .active-cumple { background: #E66E0A !important; color: white !important; border-color: #E66E0A !important; box-shadow: 0 4px 10px rgba(230,110,10,0.3); }
 .active-nocumple { background: #281e12 !important; color: white !important; border-color: #281e12 !important; }
-.active-na { background: #f2ede6 !important; color: #7a6a56 !important; border-color: #b4825040 !important; }
+.active-na { background: #b8a898 !important; color: #fff !important; border-color: #b8a898 !important; }
+.btn-download {
+    background: #281e12;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-download:hover { background: #E66E0A; }
 
 </style>
 </head>
@@ -217,7 +234,10 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
   <div class="matrix-card">
     <div class="matrix-header">
       <div class="matrix-header-title">Matriz de Evidencias</div>
-      <div class="area-tag" id="areaTag">Todas las Áreas</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button class="btn-download" onclick="downloadReport()">📥 DESCARGAR REPORTE</button>
+        <div class="area-tag" id="areaTag">Todas las Áreas</div>
+      </div>
     </div>
     <div class="matrix-table-wrap">
       <table class="matrix-table">
@@ -374,6 +394,31 @@ function drawWeightGauge(pct, color) {
     ctx.lineCap = 'round';
     ctx.stroke();
   }
+}
+
+function downloadReport() {
+  let csv = '\ufeff'; // BOM for Excel UTF-8
+  csv += 'AREA,PRACTICA,PARAMETRO,EVIDENCIA,ESTADO\n';
+  validData.forEach(d => {
+    let key = d.practica + '|' + d.parametro;
+    let val = checkState[key] || '';
+    let status = val === 'C' ? 'CUMPLE' : (val === 'NC' ? 'NO CUMPLE' : (val === 'NA' ? 'N/A' : 'PENDIENTE'));
+    
+    let row = [
+      `"${d.responsable}"`,
+      `"${d.practica}"`,
+      `"${d.parametro.replace(/"/g, '""')}"`,
+      `"${(d.evidencia || '').replace(/"/g, '""')}"`,
+      `"${status}"`
+    ];
+    csv += row.join(',') + '\n';
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', 'Reporte_Auditoria_GHK.csv');
+  link.click();
 }
 
 // ── MOTOR DASHBOARD ──────────
