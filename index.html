@@ -107,7 +107,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 }
 .active-cumple { background: #E66E0A !important; color: white !important; border-color: #E66E0A !important; box-shadow: 0 4px 10px rgba(230,110,10,0.3); }
 .active-nocumple { background: #281e12 !important; color: white !important; border-color: #281e12 !important; }
-.active-na { background: #b8a898 !important; color: #fff !important; border-color: #b8a898 !important; }
+.active-na { background: #8d7d6a !important; color: #fff !important; border-color: #8d7d6a !important; }
 .btn-download {
     background: #281e12;
     color: #fff;
@@ -496,12 +496,25 @@ function renderMatrix(areaFilter) {
   });
 }
 
+function saveState() {
+  // 1. Guardar en Nube
+  if(window.CHECKS_REF) {
+    window.CHECKS_REF.set(checkState).catch(err => console.warn("Fallo guardado en nube, usando local:", err));
+  }
+  // 2. Guardar en Local (Respaldo)
+  localStorage.setItem('ghk_progress', JSON.stringify(checkState));
+}
+
 function setEval(key, value) {
-  checkState[key] = value;
-  var sel = document.getElementById('masterSelect').value;
+  if (checkState[key] === value) {
+    delete checkState[key];
+  } else {
+    checkState[key] = value;
+  }
+  var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
   renderMatrix(sel);
   updateCompletionChart();
-  if(typeof CHECKS_REF !== 'undefined') CHECKS_REF.set(checkState);
+  saveState();
 }
 
 function updateCompletionChart() {
@@ -564,13 +577,22 @@ firebase.initializeApp({
   messagingSenderId:"951885010790",
   appId:"1:951885010790:web:9f5ff235c118a30a4adaa7"
 });
-var CHECKS_REF = firebase.database().ref('checkState');
-CHECKS_REF.on('value', function(snapshot) {
+window.CHECKS_REF = firebase.database().ref('checkState');
+window.CHECKS_REF.on('value', function(snapshot) {
   var saved = snapshot.val();
   if (saved) {
     checkState = saved;
+    // Sincronizar local también
+    localStorage.setItem('ghk_progress', JSON.stringify(checkState));
     var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
     onAreaChange(sel);
+  } else {
+    // Si no hay nada en nube, intentar recuperar del local
+    const localData = localStorage.getItem('ghk_progress');
+    if(localData) {
+      checkState = JSON.parse(localData);
+      onAreaChange('ALL');
+    }
   }
 });
 </script>
