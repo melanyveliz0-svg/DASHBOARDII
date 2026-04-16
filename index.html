@@ -609,7 +609,15 @@ window.CHECKS_REF.on('value', function(snapshot) {
   const txt = document.getElementById('syncText');
   
   if (saved) {
-    checkState = saved;
+    // MIGRACIÓN: Si hay datos en formato viejo (sin codificar), los pasamos al nuevo
+    let migratedData = {};
+    Object.keys(saved).forEach(oldKey => {
+      // Si la llave ya está codificada, la dejamos igual; si no, la codificamos
+      const newKey = oldKey.includes('%') ? oldKey : encodeURIComponent(oldKey);
+      migratedData[newKey] = saved[oldKey];
+    });
+    
+    checkState = migratedData;
     localStorage.setItem('ghk_progress', JSON.stringify(checkState));
     if(dot){dot.classList.add('status-on'); txt.textContent='Nube Conectada';}
   } else {
@@ -617,6 +625,8 @@ window.CHECKS_REF.on('value', function(snapshot) {
     if(localData) checkState = JSON.parse(localData);
     if(dot){dot.classList.remove('status-on'); txt.textContent='Sin datos en nube';}
   }
+  
+  // Refrescar Matrix y Gráficos con los datos recuperados
   const sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
   onAreaChange(sel);
 }, function(error) {
