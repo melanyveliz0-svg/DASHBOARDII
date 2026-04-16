@@ -244,61 +244,20 @@ const AREA_COLORS = {
   'GERENCIA MEDICA':'#8E44AD','ENFERMERÍA':'#E74C3C','MANTENIMIENTO':'#F0A500',
   'ESTERILIZACION':'#00B4D8','PROVEEDURÍA':'#D94F7C','SERVICIOS GENERALES':'#5D7A8A'
 };
-function getColor(area, alpha) {
+
+ function getColor(area, alpha) {
   alpha = alpha === undefined ? 1 : alpha;
   var hex = AREA_COLORS[area] || '#9a8878';
-  if (alpha === 1) return hex;
   var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return 'rgba('+r+','+g+','+b+','+alpha+')';
 }
+
 function countByResponsable() {
   var c = {};
   validData.forEach(function(d) { c[d.responsable] = (c[d.responsable]||0)+1; });
   return c;
 }
-// ── SISTEMA DE ACCESO ──────────────────────────
-function togglePass() {
-  var i=document.getElementById('loginPass'), b=document.getElementById('togglePassBtn');
-  if(i.type==='password'){i.type='text';b.textContent='🙈';}
-  else{i.type='password';b.textContent='👁️';}
-}
-function doLogin() {
-  var u = document.getElementById('loginUser').value.trim().toLowerCase();
-  var p = document.getElementById('loginPass').value;
-  var err = document.getElementById('loginError');
-  if(USERS[u] && USERS[u].pass === p) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('userBadge').innerHTML = '👤 ' + u.toUpperCase() + ' &nbsp;✕';
-    var area = USERS[u].area;
-    if(area === 'ALL') {
-      document.getElementById('masterSelect').disabled = false;
-      document.getElementById('masterSelect').style.opacity = '1';
-      onAreaChange('ALL');
-    } else {
-      var sel = document.getElementById('masterSelect');
-      sel.value = area; 
-      sel.disabled = true; 
-      sel.style.opacity = '0.7';
-      onAreaChange(area);
-    }
-    err.style.display = 'none';
-  } else {
-    alert("Acceso denegado. Verifica el usuario y clave.");
-    err.style.display = 'block';
-  }
-}
-function confirmLogout() {
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('userBadge').innerHTML = 'AUDITORÍA 2026';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-}
-function cancelLogout() { document.getElementById('logoutConfirm').style.display='none'; }
-document.addEventListener('click', function(e) {
-  var c=document.getElementById('logoutConfirm'), b=document.getElementById('userBadge');
-  if(c&&b&&!c.contains(e.target)&&!b.contains(e.target)) c.style.display='none';
-});
-// ── USERS ─────────────────────────────────────────────────────
+
 var USERS = {
   'admin':         {pass:'GHK@admin2026', area:'ALL'},
   'clinicos':      {pass:'Clin@2026',     area:'CLINICOS'},
@@ -311,46 +270,108 @@ var USERS = {
   'proveeduria':   {pass:'Prov@2026',     area:'PROVEEDURÍA'},
   'servicios':     {pass:'Serv@2026',     area:'SERVICIOS GENERALES'}
 };
+
 var checkState = {};
-// ── GAUGE (Peso por Área) ─────────────────────────────────────
-var gaugeAnim=null, gaugeCurrent=0;
-function drawGauge(pct, color) {
-  var canvas=document.getElementById('gaugeCanvas');
-  if(!canvas) return;
-  var ctx=canvas.getContext('2d'), W=canvas.width, H=canvas.height;
-  ctx.clearRect(0,0,W,H);
-  var cx=W/2, cy=H-10, R=Math.min(W*.36,cy-14), lw=13;
-  ctx.beginPath(); ctx.arc(cx,cy,R,Math.PI,2*Math.PI);
-  ctx.strokeStyle='#ede8de'; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
-  if(pct>0.1) {
-    var grd=ctx.createLinearGradient(cx-R,cy,cx+R,cy);
-    grd.addColorStop(0,color);
-    var r2=Math.min(255,parseInt(color.slice(1,3),16)+60);
-    var g2=Math.min(255,parseInt(color.slice(3,5),16)+40);
-    var b2=Math.min(255,parseInt(color.slice(5,7),16)+20);
-    grd.addColorStop(1,'rgb('+r2+','+g2+','+b2+')');
-    ctx.beginPath(); ctx.arc(cx,cy,R,Math.PI,Math.PI+(pct/100)*Math.PI);
-    ctx.strokeStyle=grd; ctx.lineWidth=lw; ctx.lineCap='round';
-    ctx.shadowColor=color; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
-    var angle=Math.PI+(pct/100)*Math.PI;
-    var nx=cx+R*Math.cos(angle), ny=cy+R*Math.sin(angle);
-    ctx.beginPath(); ctx.arc(nx,ny,lw/2+3,0,2*Math.PI);
-    ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
-  }
-  ctx.beginPath(); ctx.arc(cx,cy,5,0,2*Math.PI); ctx.fillStyle='#ccc5b8'; ctx.fill();
-}
-function animateGauge(target, color) {
-  if(gaugeAnim) cancelAnimationFrame(gaugeAnim);
-  var start=gaugeCurrent, delta=target-start, t0=performance.now(), dur=700;
-  function step(now) {
-    var p=Math.min((now-t0)/dur,1), ease=1-Math.pow(1-p,3);
-    gaugeCurrent=start+delta*ease; drawGauge(gaugeCurrent,color);
-    if(p<1) gaugeAnim=requestAnimationFrame(step); else gaugeCurrent=target;
-  }
-  gaugeAnim=requestAnimationFrame(step);
+
+// ── LOGIN ──────────
+function togglePass() {
+  var i=document.getElementById('loginPass'), b=document.getElementById('togglePassBtn');
+  if(i.type==='password'){i.type='text';b.textContent='🙈';}
+  else{i.type='password';b.textContent='👁️';}
 }
 
-// ── COMPLETION DONUT ──────────────────────────────────────────
+function doLogin() {
+  var user=document.getElementById('loginUser').value.trim().toLowerCase();
+  var pass=document.getElementById('loginPass').value;
+  var err=document.getElementById('loginError');
+  if(USERS[user] && USERS[user].pass===pass) {
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('userBadge').innerHTML='👤 '+user.toUpperCase()+' &nbsp;✕';
+    var sel=document.getElementById('masterSelect');
+    if(USERS[user].area==='ALL') {
+      sel.disabled=false; sel.style.opacity='1';
+      onAreaChange('ALL');
+    } else {
+      sel.value=USERS[user].area; sel.disabled=true; sel.style.opacity='0.7';
+      onAreaChange(USERS[user].area);
+    }
+    err.style.display='none';
+  } else {
+    err.style.display='block';
+    document.getElementById('loginPass').value='';
+  }
+}
+
+function showLogoutConfirm() {
+  var c=document.getElementById('logoutConfirm');
+  c.style.display=c.style.display==='flex'?'none':'flex';
+}
+
+function confirmLogout() {
+  document.getElementById('logoutConfirm').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('userBadge').innerHTML='AUDITORÍA 2026';
+  document.getElementById('masterSelect').disabled=false;
+  document.getElementById('masterSelect').style.opacity='1';
+}
+
+// ── MOTOR DASHBOARD ──────────
+function onAreaChange(area) {
+  var areaTag = document.getElementById('areaTag');
+  if(areaTag) {
+    areaTag.textContent = area === 'ALL' ? 'TODAS LAS ÁREAS' : area;
+    areaTag.style.background = area === 'ALL' ? '#E66E0A' : getColor(area);
+  }
+  renderMatrix(area);
+  updateCompletionChart();
+}
+
+function renderMatrix(areaFilter) {
+  var tbody = document.getElementById('matrixBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  var filtered = areaFilter === 'ALL' ? validData : validData.filter(d => d.responsable === areaFilter);
+  filtered.forEach(d => {
+    var key = d.practica + '|' + d.parametro;
+    var val = checkState[key] || ''; 
+    var tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.practica}</td>
+      <td>${d.parametro}</td>
+      <td>${d.evidencia || '—'}</td>
+      <td><div class="eval-cell">
+        <button class="btn-eval ${val==='C'?'active-cumple':''}" onclick="setEval('${key}','C')">CUMPLE</button>
+        <button class="btn-eval ${val==='NC'?'active-nocumple':''}" onclick="setEval('${key}','NC')">NO CUMPLE</button>
+        <button class="btn-eval ${val==='NA'?'active-na':''}" onclick="setEval('${key}','NA')">N/A</button>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setEval(key, value) {
+  checkState[key] = value;
+  var sel = document.getElementById('masterSelect').value;
+  renderMatrix(sel);
+  updateCompletionChart();
+  if(typeof CHECKS_REF !== 'undefined') CHECKS_REF.set(checkState);
+}
+
+function updateCompletionChart() {
+  var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
+  var done = 0, total = 0;
+  validData.forEach(d => {
+    if (sel === 'ALL' || d.responsable === sel) {
+      var key = d.practica + '|' + d.parametro;
+      var val = checkState[key];
+      if (val !== 'NA') { total++; if (val === 'C') done++; }
+    }
+  });
+  var pct = total > 0 ? (done / total) * 100 : 0;
+  document.getElementById('compGlobalPct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('compGlobalSub').textContent = done + ' de ' + total + ' cumplen (excluye N/A)';
+  drawCompGauge(pct, sel === 'ALL' ? '#E66E0A' : getColor(sel));
+}
+
 function drawCompGauge(pct, color) {
   var canvas=document.getElementById('compGauge');
   if(!canvas) return;
@@ -360,208 +381,27 @@ function drawCompGauge(pct, color) {
   ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI);
   ctx.strokeStyle='#ede8de'; ctx.lineWidth=lw; ctx.stroke();
   if(pct>0.1) {
-    var startAngle=-Math.PI/2;
-    var endAngle=startAngle+(pct/100)*2*Math.PI;
-    var grd=ctx.createLinearGradient(cx-R,cy,cx+R,cy);
-    grd.addColorStop(0,color);
-    var r2=Math.min(255,parseInt(color.slice(1,3),16)+50);
-    var g2=Math.min(255,parseInt(color.slice(3,5),16)+30);
-    var b2=Math.min(255,parseInt(color.slice(5,7),16)+10);
-    grd.addColorStop(1,'rgb('+r2+','+g2+','+b2+')');
+    var startAngle=-Math.PI/2, endAngle=startAngle+(pct/100)*2*Math.PI;
     ctx.beginPath(); ctx.arc(cx,cy,R,startAngle,endAngle);
-    ctx.strokeStyle=grd; ctx.lineWidth=lw; ctx.lineCap='round';
-    ctx.shadowColor=color; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
-    var nx=cx+R*Math.cos(endAngle), ny=cy+R*Math.sin(endAngle);
-    ctx.beginPath(); ctx.arc(nx,ny,lw/2+2,0,2*Math.PI);
-    ctx.fillStyle='#fff'; ctx.fill();
-    ctx.beginPath(); ctx.arc(nx,ny,lw/2-2,0,2*Math.PI);
-    ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
+    ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
   }
 }
-function updateCompletionChart() {
-  var counts = countByResponsable();
-  var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-  var showArea = (sel && sel !== 'ALL') ? sel : null;
-  let done = 0;   // Contador para el área actual
-  let total = 0;  // Items evaluables para el área actual
-  // Calculamos el progreso basándonos en los 3 botones
-  validData.forEach(function(d, idx) {
-    var estado = checkState[idx];
-    var perteneceAArea = !showArea || d.responsable === showArea;
-    if (perteneceAArea) {
-      if (estado === "cumple" || estado === "no-cumple") {
-        total++; // Es evaluable
-        if (estado === "cumple") done++; // Es un éxito
-      }
-      // El N/A (na) no entra en total ni en done.
-    }
-  });
-  var pct = total > 0 ? parseFloat(((done / total) * 100).toFixed(1)) : 0;
-  var color = showArea ? getColor(showArea) : '#E66E0A';
-  var label = showArea ? showArea : 'AVANCE GLOBAL';
-  // Actualizar los elementos visuales del Dashboard
-  document.getElementById('compGlobalLabel').textContent = label;
-  document.getElementById('compGlobalLabel').style.color = color;
-  document.getElementById('compGlobalPct').textContent = pct.toFixed(1) + '%';
-  document.getElementById('compGlobalPct').style.color = color;
-  document.getElementById('compGlobalSub').textContent = done + ' / ' + total + ' completadas';
-  // Mueve la barra naranja (o del color del área)
-  drawCompGauge(pct, color);
-  // Lanza el aviso de felicitaciones si llegan al 100%
-  checkCelebration(showArea || 'ALL', pct);
-}
 
-// ── CELEBRATION ───────────────────────────────────────────────
-var celebratedAreas = {};
-function checkCelebration(area, pct) {
-  if(pct>=100 && !celebratedAreas[area]) {
-    celebratedAreas[area]=true;
-    showCelebration(area);
-  }
-  if(pct<100) celebratedAreas[area]=false;
-}
-function showCelebration(area) {
-  var color=area==='ALL'?'#E66E0A':getColor(area);
-  document.getElementById('celebAreaName').textContent=area==='ALL'?'TODAS LAS ÁREAS':area;
-  document.getElementById('celebAreaName').style.color=color;
-  var stars=document.getElementById('celebStars');
-  stars.innerHTML='';
-  var cols=['#E66E0A','#F0A500','#27AE60','#2E86C1','#8E44AD','#E74C3C'];
-  for(var i=0;i<24;i++) {
-    var s=document.createElement('div');
-    s.className='star';
-    s.style.left=Math.random()*100+'%';
-    s.style.top='-10px';
-    s.style.background=cols[Math.floor(Math.random()*cols.length)];
-    s.style.animationDelay=Math.random()*2+'s';
-    s.style.animationDuration=(1.5+Math.random()*1.5)+'s';
-    s.style.width=s.style.height=(5+Math.random()*8)+'px';
-    stars.appendChild(s);
-  }
-  document.getElementById('celebrationModal').style.display='flex';
-}
-function closeCelebration() {
-  document.getElementById('celebrationModal').style.display='none';
-}
-
-// ── BAR CHART ─────────────────────────────────────────────────
-var barInst=null, barLabels=[];
-function buildCharts() {
-  var counts=countByResponsable();
-  var labels=Object.keys(counts);
-  barLabels=labels.slice().sort(function(a,b){return counts[b]-counts[a];});
-  barInst=new Chart(document.getElementById('barChart').getContext('2d'),{
-    type:'bar',
-    data:{labels:barLabels,datasets:[{
-      data:barLabels.map(function(l){return counts[l];}),
-      backgroundColor:barLabels.map(function(l){return getColor(l,.75);}),
-      borderColor:barLabels.map(function(l){return getColor(l);}),
-      borderWidth:1.5,borderRadius:6,borderSkipped:false
-    }]},
-    options:{
-      responsive:true,maintainAspectRatio:false,indexAxis:'y',
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#E66E0A',borderWidth:1.5,titleColor:'#281e12',bodyColor:'#7a6a56',padding:12,
-        callbacks:{label:function(ctx){return ' '+ctx.raw+' items — '+((ctx.raw/TOTAL)*100).toFixed(1)+'% del total';}}}},
-      scales:{
-        x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#7a6a56',font:{size:11}},border:{color:'rgba(0,0,0,.08)'}},
-        y:{grid:{display:false},ticks:{color:'#281e12',font:{size:11,family:'Barlow Condensed',weight:'600'},maxRotation:0},border:{display:false}}
-      },
-      animation:{duration:900,easing:'easeOutQuart'},
-      onClick:function(e,items){if(items.length){var l=barLabels[items[0].index];document.getElementById('masterSelect').value=l;onAreaChange(l);}}
-    }
-  });
-}
-function highlightBar(sel) {
-  if(!barInst) return;
-  barInst.data.datasets[0].backgroundColor=barLabels.map(function(l){return sel==='ALL'?getColor(l,.75):l===sel?getColor(l,1):getColor(l,.15);});
-  barInst.data.datasets[0].borderColor=barLabels.map(function(l){return sel==='ALL'?getColor(l):l===sel?getColor(l):getColor(l,.2);});
-  barInst.update('none');
-}
-
-// ── SELECT ────────────────────────────────────────────────────
 function buildSelect() {
   var sel=document.getElementById('masterSelect');
+  sel.innerHTML = '<option value="ALL">TODAS LAS ÁREAS</option>';
   var counts=countByResponsable();
-  Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).forEach(function(area){
+  Object.keys(counts).forEach(area => {
     var o=document.createElement('option');
-    o.value=area; o.textContent=area+'  ('+counts[area]+' items)'; sel.appendChild(o);
+    o.value=area; o.textContent=area+' ('+counts[area]+')'; sel.appendChild(o);
   });
 }
 
-// ── MAIN AREA CHANGE ──────────────────────────────────────────
-function onAreaChange(sel) {
-  var counts=countByResponsable();
-  var color=sel==='ALL'?'#E66E0A':getColor(sel);
-  var count=sel==='ALL'?TOTAL:(counts[sel]||0);
-  var pct=(count/TOTAL)*100;
-  // Left card
-  document.getElementById('kpiTotal').textContent=count;
-  document.getElementById('kpiLabel').textContent=sel==='ALL'?'Total Responsabilidades':'Responsabilidades';
-  document.getElementById('kpiSub').textContent=sel==='ALL'?'Ítems en la Matriz de Auditoría':sel;
-  document.getElementById('kpiSub').style.color=sel==='ALL'?'var(--text-muted)':color;
-  // Gauge
-  document.getElementById('gaugeAreaName').textContent=sel==='ALL'?'TODAS LAS AREAS':sel;
-  document.getElementById('gaugeAreaName').style.color=color;
-  document.getElementById('gaugePct').textContent=pct.toFixed(1)+'%';
-  document.getElementById('gaugePct').style.color=color;
-  animateGauge(pct, color);
-  // Tag
-  var tag=document.getElementById('areaTag');
-  tag.textContent=sel==='ALL'?'Todas las Áreas':sel;
-  tag.style.background=color;
-  // Bar highlight
-  highlightBar(sel);
-  // Completion donut
-  updateCompletionChart();
-  // Matrix
-  var rows=sel==='ALL'?validData:validData.filter(function(d){return d.responsable===sel;});
-  var tbody=document.getElementById('matrixBody');
-  tbody.innerHTML='';
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="4" style="padding:40px;text-align:center;color:#b8a898">No hay datos.</td></tr>';return;}
-   /* --- NUEVA LÓGICA DE FILAS CON 3 BOTONES --- */
-rows.forEach(function(d){
-      var globalIdx = validData.indexOf(d);
-      var estadoAcutal = checkState[globalIdx] || "";
-      var tr = document.createElement('tr');
-      if(estadoAcutal === "cumple") tr.classList.add('row-checked');
-      tr.innerHTML = `
-          <td>${d.practica}</td>
-          <td>${d.parametro}</td>
-          <td>${d.responsable || '—'}</td>
-          <td class="eval-cell">
-              <button class="btn-eval ${estadoAcutal==='cumple'?'active-cumple':''}" onclick="hacerEval(this, 'cumple', ${globalIdx})">Cumple</button>
-              <button class="btn-eval ${estadoAcutal==='no-cumple'?'active-nocumple':''}" onclick="hacerEval(this, 'no-cumple', ${globalIdx})">No Cumple</button>
-              <button class="btn-eval ${estadoAcutal==='na'?'active-na':''}" onclick="hacerEval(this, 'na', ${globalIdx})">N/A</button>
-          </td>`;
-      tbody.appendChild(tr);
-  });
-// --- FUNCIÓN PARA PROCESAR EL CLIC Y ACTUALIZAR EL AVANCE ---
-// --- FUNCIÓN PARA MOVER EL GRÁFICO ---
-function hacerEval(btn, tipo, idx) {
-    const fila = btn.closest('tr');
-    fila.querySelectorAll('.btn-eval').forEach(b => b.classList.remove('active-cumple', 'active-nocumple', 'active-na'));
-    btn.classList.add('active-' + tipo);
-    
-    checkState[idx] = tipo;
-    
-    if(tipo === 'cumple') fila.classList.add('row-checked');
-    else fila.classList.remove('row-checked');
-    saveChecks(); 
-    updateCompletionChart(); // AQUÍ SE DISPARA LA AUTOMATIZACIÓN
-}
-// ── FIREBASE SAVE ─────────────────────────────────────────────
-function saveChecks() {
-  try{if(typeof CHECKS_REF!=='undefined') CHECKS_REF.set(checkState);}catch(e){}
-}
-
-// ── INIT ──────────────────────────────────────────────────────
-document.getElementById('kpiTotal').textContent=TOTAL;
-buildCharts();
+// Init
 buildSelect();
 onAreaChange('ALL');
 </script>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -574,16 +414,13 @@ firebase.initializeApp({
   messagingSenderId:"951885010790",
   appId:"1:951885010790:web:9f5ff235c118a30a4adaa7"
 });
-var db = firebase.database();
-var CHECKS_REF = db.ref('checkState');
+var CHECKS_REF = firebase.database().ref('checkState');
 CHECKS_REF.on('value', function(snapshot) {
   var saved = snapshot.val();
   if (saved) {
     checkState = saved;
-    // Esto redibuja la tabla con los estados correctos (Cumple/No Cumple/NA)
     var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
     onAreaChange(sel);
-    updateCompletionChart();
   }
 });
 </script>
