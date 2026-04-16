@@ -15,6 +15,10 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 .header-title h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--text);line-height:1;}
 .header-title span{font-size:11px;color:var(--ghk);letter-spacing:2.5px;text-transform:uppercase;font-weight:500;}
 .header-badge{background:var(--ghk-muted);border:1.5px solid var(--ghk);border-radius:20px;padding:5px 16px;font-size:11px;font-weight:700;color:var(--ghk-dark);letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+#syncStatus{font-size:10px;font-weight:700;margin-left:12px;display:flex;align-items:center;gap:4px;color:#7a6a56;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#b8a898;}
+.status-on{background:#27ae60 !important;box-shadow:0 0 8px #27ae60;}
+.status-off{background:#e74c3c !important;}
 .main{padding:28px 36px;max-width:1600px;margin:0 auto;}
 .section-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--ghk);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
 .section-label::before{content:'';display:block;width:20px;height:2px;background:var(--ghk);border-radius:2px;}
@@ -173,6 +177,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
       <h1>HOSPITAL CLÍNICA KENNEDY</h1>
       <span>Evaluación de la Calidad de Atención y Seguridad al Paciente</span>
     </div>
+    <div id="syncStatus"><div class="status-dot" id="syncDot"></div> <span id="syncText">Conectando...</span></div>
   </div>
   <div class="header-badge" id="userBadge" onclick="showLogoutConfirm()">AUDITORÍA 2026</div>
 </header>
@@ -510,9 +515,16 @@ function renderMatrix(areaFilter) {
 }
 
 function saveState() {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
   // 1. Guardar en Nube
   if(window.CHECKS_REF) {
-    window.CHECKS_REF.set(checkState).catch(err => console.warn("Fallo guardado en nube, usando local:", err));
+    window.CHECKS_REF.set(checkState).then(() => {
+       if(dot){dot.classList.add('status-on');txt.textContent='Nube Sincronizada';}
+    }).catch(err => {
+       console.warn("Fallo guardado en nube:", err);
+       if(dot){dot.classList.add('status-off');txt.textContent='Error de Red';}
+    });
   }
   // 2. Guardar en Local (Respaldo)
   localStorage.setItem('ghk_progress', JSON.stringify(checkState));
@@ -593,17 +605,24 @@ firebase.initializeApp({
 window.CHECKS_REF = firebase.database().ref('checkState');
 window.CHECKS_REF.on('value', function(snapshot) {
   const saved = snapshot.val();
-  console.log("Datos sincronizados desde Nube");
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  
   if (saved) {
     checkState = saved;
     localStorage.setItem('ghk_progress', JSON.stringify(checkState));
+    if(dot){dot.classList.add('status-on'); txt.textContent='Nube Conectada';}
   } else {
     const localData = localStorage.getItem('ghk_progress');
     if(localData) checkState = JSON.parse(localData);
+    if(dot){dot.classList.remove('status-on'); txt.textContent='Sin datos en nube';}
   }
   const sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
   onAreaChange(sel);
 }, function(error) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  if(dot){dot.classList.add('status-off'); txt.textContent='Nube bloqueada';}
   console.error("Error de Firebase:", error);
 });
 </script>
