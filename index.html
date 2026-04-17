@@ -363,6 +363,7 @@ function buildCharts() {
   const colorArray = labels.map(l => AREA_COLORS[l]);
   
   if(areaChart) areaChart.destroy();
+  
   areaChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -379,6 +380,14 @@ function buildCharts() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
+      onClick: (e, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const area = labels[index];
+          const select = document.getElementById('masterSelect');
+          if (select) { select.value = area; onAreaChange(area); }
+        }
+      },
       scales: { x: { beginAtZero: true, grid: { display : false } } }
     }
   });
@@ -422,7 +431,7 @@ function downloadReport() {
   const areas = {};
   validData.forEach(d => {
     if(!areas[d.responsable]) areas[d.responsable] = { c:0, nc:0, na:0, p:0, t:0 };
-    let key = d.practica + '|' + d.parametro;
+    let key = sanitizeKey(d.practica + "||" + d.parametro);
     let val = checkState[key] || '';
     areas[d.responsable].t++;
     if(val === 'C') areas[d.responsable].c++;
