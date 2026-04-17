@@ -497,14 +497,13 @@ function renderMatrix(areaFilter) {
   var filtered = areaFilter === 'ALL' ? validData : validData.filter(d => d.responsable === areaFilter);
   
   filtered.forEach(d => {
-    var key = d.practica + '|' + d.parametro;
+    var key = sanitizeKey(d.practica + "||" + d.parametro);
     var val = checkState[key] || ''; 
     var tr = document.createElement('tr');
     
-    // Usamos variables de texto seguro para el HTML
-    var btnC = `<button class="btn-eval ${val==='C'?'active-cumple':''}" data-key="${encodeURIComponent(key)}" data-val="C">CUMPLE</button>`;
-    var btnNC = `<button class="btn-eval ${val==='NC'?'active-nocumple':''}" data-key="${encodeURIComponent(key)}" data-val="NC">NO CUMPLE</button>`;
-    var btnNA = `<button class="btn-eval ${val==='NA'?'active-na':''}" data-key="${encodeURIComponent(key)}" data-val="NA">N/A</button>`;
+    var btnC = `<button class="btn-eval ${val==='C'?'active-cumple':''}" data-key="${key}" data-val="C">CUMPLE</button>`;
+    var btnNC = `<button class="btn-eval ${val==='NC'?'active-nocumple':''}" data-key="${key}" data-val="NC">NO CUMPLE</button>`;
+    var btnNA = `<button class="btn-eval ${val==='NA'?'active-na':''}" data-key="${key}" data-val="NA">N/A</button>`;
 
     tr.innerHTML = `
       <td>${d.practica}</td>
@@ -515,7 +514,7 @@ function renderMatrix(areaFilter) {
     // Delegar el evento de clic de forma segura para evitar problemas con comillas
     tr.querySelectorAll('button').forEach(btn => {
       btn.onclick = function() {
-        var k = decodeURIComponent(this.getAttribute('data-key'));
+        var k = this.getAttribute('data-key');
         var v = this.getAttribute('data-val');
         setEval(k, v);
       };
@@ -525,11 +524,16 @@ function renderMatrix(areaFilter) {
   });
 }
 
+// Función maestra para limpiar llaves de Firebase (prohíbe . $ # [ ] /)
+function sanitizeKey(str) {
+  return encodeURIComponent(str).replace(/\./g, '%2E');
+}
+
 function saveState() {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
   
-  if (Object.keys(checkState).length === 0) return; // No guardamos estados vacíos
+  if (Object.keys(checkState).length === 0) return;
 
   localStorage.setItem('ghk_progress', JSON.stringify(checkState));
   
@@ -537,7 +541,7 @@ function saveState() {
     window.CHECKS_REF.set(checkState).then(() => {
        if(dot){dot.classList.add('status-on');txt.textContent='📡 Sincronizado';}
     }).catch(err => {
-       console.warn("Fallo nube:", err);
+       console.error("Error crítico Firebase:", err);
        if(dot){dot.classList.add('status-off');txt.textContent='⚠️ Modo Local';}
     });
   }
@@ -591,16 +595,17 @@ function importData(event) {
   reader.readAsText(file);
 }
 
-function setEval(key, value) {
-  if (checkState[key] === value) {
+function setEval(key, status) {
+  if (checkState[key] === status) {
     delete checkState[key];
   } else {
-    checkState[key] = value;
+    checkState[key] = status;
   }
-  var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-  renderMatrix(sel);
-  updateCompletionChart();
   saveState();
+  const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
+  renderMatrix(currentArea);
+  updateCharts(); 
+  if(typeof buildCharts === 'function') buildCharts();
 }
 
 function updateCompletionChart() {
@@ -608,7 +613,7 @@ function updateCompletionChart() {
   var done = 0, total = 0;
   validData.forEach(d => {
     if (sel === 'ALL' || d.responsable === sel) {
-      var key = d.practica + '|' + d.parametro;
+      var key = sanitizeKey(d.practica + "||" + d.parametro);
       var val = checkState[key];
       if (val !== 'NA') { total++; if (val === 'C') done++; }
     }
@@ -672,9 +677,9 @@ window.CHECKS_REF.on('value', function(snapshot) {
   if (saved && Object.keys(saved).length > 0) {
     let migratedData = {};
     Object.keys(saved).forEach(key => {
-      // Normalizamos todas las llaves al formato seguro (con encode)
-      const secureKey = key.includes('%') ? key : encodeURIComponent(key);
-      migratedData[secureKey] = saved[key];
+      // Limpiamos llaves viejas o mal formateadas al vuelo
+      const cleanKey = key.includes('%2E') || key.includes('%20') ? key : sanitizeKey(decodeURIComponent(key));
+      migratedData[cleanKey] = saved[key];
     });
     
     checkState = migratedData;
