@@ -180,11 +180,14 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
       <h1>HOSPITAL CLÍNICA KENNEDY</h1>
       <span>Evaluación de la Calidad de Atención y Seguridad al Paciente</span>
     </div>
-    <div id="syncStatus"><div class="status-dot" id="syncDot"></div> <span id="syncText">Conectando...</span></div>
+  </div>
+  <div id="syncStatus">
+    <div class="status-dot" id="syncDot"></div> 
+    <span id="syncText">Buscando datos...</span>
   </div>
   <div class="backup-tools">
-    <button class="btn-backup" onclick="exportData()" title="Descargar copia de seguridad">📥 Exportar</button>
-    <button class="btn-backup" onclick="document.getElementById('importFile').click()" title="Subir copia de seguridad">📤 Importar</button>
+    <button class="btn-backup" onclick="exportData()" title="Descargar copia de seguridad">📥 Guardar Respaldo</button>
+    <button class="btn-backup" onclick="document.getElementById('importFile').click()" title="Subir copia de seguridad">📤 Cargar Respaldo</button>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)" accept=".json">
   </div>
   <div class="header-badge" id="userBadge" onclick="showLogoutConfirm()">AUDITORÍA 2026</div>
@@ -556,12 +559,14 @@ function importData(event) {
   reader.onload = function(e) {
     try {
       const imported = JSON.parse(e.target.result);
+      if (typeof imported !== 'object') throw new Error("Formato inválido");
       checkState = imported;
       saveState();
       onAreaChange(document.getElementById('masterSelect').value);
-      alert("✅ Progreso cargado correctamente.");
+      alert("✅ ¡Excelente! Tu progreso ha sido restaurado correctamente.");
     } catch (err) {
-      alert("❌ Error: El archivo no es válido.");
+      console.error("Error de importación:", err);
+      alert("❌ Error: Este archivo no es un respaldo válido del Dashboard.\n\nAsegúrate de subir el archivo .json que descargaste anteriormente con el botón 'Exportar'.");
     }
   };
   reader.readAsText(file);
@@ -645,27 +650,30 @@ window.CHECKS_REF.on('value', function(snapshot) {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
   
-  if (saved) {
-    // MIGRACIÓN: Si hay datos en formato viejo (sin codificar), los pasamos al nuevo
+  console.log("Datos recibidos de la nube:", saved);
+
+  if (saved && Object.keys(saved).length > 0) {
     let migratedData = {};
     Object.keys(saved).forEach(oldKey => {
-      // Si la llave ya está codificada, la dejamos igual; si no, la codificamos
       const newKey = oldKey.includes('%') ? oldKey : encodeURIComponent(oldKey);
       migratedData[newKey] = saved[oldKey];
     });
     
     checkState = migratedData;
     localStorage.setItem('ghk_progress', JSON.stringify(checkState));
-    if(dot){dot.classList.add('status-on'); txt.textContent='Nube Conectada';}
+    if(dot){dot.classList.add('status-on'); txt.textContent='📡 Nube Conectada';}
   } else {
+    // Si no hay nada en la nube, intentamos recuperar de la memoria local como último recurso
     const localData = localStorage.getItem('ghk_progress');
-    if(localData) checkState = JSON.parse(localData);
-    if(dot){dot.classList.remove('status-on'); txt.textContent='Sin datos en nube';}
+    if(localData) {
+        checkState = JSON.parse(localData);
+        if(dot){dot.classList.remove('status-on'); txt.textContent='💾 Usando Memoria Local';}
+    } else {
+        if(dot){dot.classList.remove('status-on'); txt.textContent='⚪ Sin datos previos';}
+    }
   }
   
-  // Refrescar Matrix y Gráficos con los datos recuperados
-  const sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-  onAreaChange(sel);
+  onAreaChange(document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL');
 }, function(error) {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
