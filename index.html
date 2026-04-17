@@ -528,28 +528,39 @@ function renderMatrix(areaFilter) {
 function saveState() {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
-  // 1. Guardar en Local (Prioridad inmediata)
+  
+  if (Object.keys(checkState).length === 0) return; // No guardamos estados vacíos
+
   localStorage.setItem('ghk_progress', JSON.stringify(checkState));
   
-  // 2. Guardar en Nube (Si hay conexión)
   if(window.CHECKS_REF) {
     window.CHECKS_REF.set(checkState).then(() => {
-       if(dot){dot.classList.add('status-on');txt.textContent='Sincronizado';}
+       if(dot){dot.classList.add('status-on');txt.textContent='📡 Sincronizado';}
     }).catch(err => {
        console.warn("Fallo nube:", err);
-       if(dot){dot.classList.add('status-off');txt.textContent='Modo Offline';}
+       if(dot){dot.classList.add('status-off');txt.textContent='⚠️ Modo Local';}
     });
   }
 }
 
 function exportData() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(checkState));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", "respaldo_auditoria_ghk.json");
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
+  try {
+    const dataStr = JSON.stringify(checkState, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", url);
+    downloadAnchorNode.setAttribute("download", "respaldo_auditoria_ghk.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    URL.revokeObjectURL(url);
+    
+    alert("✅ Archivo de respaldo creado con éxito.\nGuárdalo en un lugar seguro.");
+  } catch (e) {
+    alert("❌ Error al exportar: " + e.message);
+  }
 }
 
 function importData(event) {
@@ -558,15 +569,23 @@ function importData(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const imported = JSON.parse(e.target.result);
-      if (typeof imported !== 'object') throw new Error("Formato inválido");
-      checkState = imported;
-      saveState();
-      onAreaChange(document.getElementById('masterSelect').value);
-      alert("✅ ¡Excelente! Tu progreso ha sido restaurado correctamente.");
+      const content = e.target.result;
+      const imported = JSON.parse(content);
+      
+      if (imported && typeof imported === 'object') {
+        // Mezclamos con el estado actual por seguridad
+        checkState = Object.assign(checkState, imported);
+        saveState();
+        renderMatrix();
+        updateCharts();
+        if(typeof buildCharts === 'function') buildCharts();
+        alert("✅ ¡Éxito! Tu respaldo ha sido cargado y sincronizado.");
+      } else {
+        throw new Error("El archivo no tiene el formato correcto.");
+      }
     } catch (err) {
-      console.error("Error de importación:", err);
-      alert("❌ Error: Este archivo no es un respaldo válido del Dashboard.\n\nAsegúrate de subir el archivo .json que descargaste anteriormente con el botón 'Exportar'.");
+      console.error("Error detallado:", err);
+      alert("❌ Error: Este archivo no es válido.\nDetalle: " + err.message);
     }
   };
   reader.readAsText(file);
