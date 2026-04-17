@@ -650,20 +650,18 @@ window.CHECKS_REF.on('value', function(snapshot) {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
   
-  console.log("Datos recibidos de la nube:", saved);
-
   if (saved && Object.keys(saved).length > 0) {
     let migratedData = {};
-    Object.keys(saved).forEach(oldKey => {
-      const newKey = oldKey.includes('%') ? oldKey : encodeURIComponent(oldKey);
-      migratedData[newKey] = saved[oldKey];
+    Object.keys(saved).forEach(key => {
+      // Normalizamos todas las llaves al formato seguro (con encode)
+      const secureKey = key.includes('%') ? key : encodeURIComponent(key);
+      migratedData[secureKey] = saved[key];
     });
     
     checkState = migratedData;
     localStorage.setItem('ghk_progress', JSON.stringify(checkState));
     if(dot){dot.classList.add('status-on'); txt.textContent='📡 Nube Conectada';}
   } else {
-    // Si no hay nada en la nube, intentamos recuperar de la memoria local como último recurso
     const localData = localStorage.getItem('ghk_progress');
     if(localData) {
         checkState = JSON.parse(localData);
@@ -673,7 +671,20 @@ window.CHECKS_REF.on('value', function(snapshot) {
     }
   }
   
-  onAreaChange(document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL');
+  // REFRESH INMEDIATO Y AGRESIVO DE TODA LA UI
+  const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
+  console.log("Refrescando UI con área:", currentArea);
+  
+  // Forzamos el renderizado de todo
+  renderMatrix(); 
+  updateCharts();
+  if(typeof buildCharts === 'function') buildCharts();
+  
+  // Pequeño re-intento de seguridad para asegurar que los gráficos se dibujen bien
+  setTimeout(() => {
+     updateCharts();
+  }, 500);
+
 }, function(error) {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
