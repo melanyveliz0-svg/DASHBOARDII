@@ -19,6 +19,9 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 .status-dot{width:8px;height:8px;border-radius:50%;background:#b8a898;}
 .status-on{background:#27ae60 !important;box-shadow:0 0 8px #27ae60;}
 .status-off{background:#e74c3c !important;}
+.backup-tools{display:flex;gap:10px;margin-left:auto;}
+.btn-backup{background:rgba(255,255,255,0.1);border:1px solid var(--ghk);color:var(--ghk-dark);padding:5px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:5px;}
+.btn-backup:hover{background:var(--ghk);color:white;}
 .main{padding:28px 36px;max-width:1600px;margin:0 auto;}
 .section-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--ghk);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
 .section-label::before{content:'';display:block;width:20px;height:2px;background:var(--ghk);border-radius:2px;}
@@ -178,6 +181,11 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
       <span>Evaluación de la Calidad de Atención y Seguridad al Paciente</span>
     </div>
     <div id="syncStatus"><div class="status-dot" id="syncDot"></div> <span id="syncText">Conectando...</span></div>
+  </div>
+  <div class="backup-tools">
+    <button class="btn-backup" onclick="exportData()" title="Descargar copia de seguridad">📥 Exportar</button>
+    <button class="btn-backup" onclick="document.getElementById('importFile').click()" title="Subir copia de seguridad">📤 Importar</button>
+    <input type="file" id="importFile" style="display:none" onchange="importData(event)" accept=".json">
   </div>
   <div class="header-badge" id="userBadge" onclick="showLogoutConfirm()">AUDITORÍA 2026</div>
 </header>
@@ -517,17 +525,46 @@ function renderMatrix(areaFilter) {
 function saveState() {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
-  // 1. Guardar en Nube
+  // 1. Guardar en Local (Prioridad inmediata)
+  localStorage.setItem('ghk_progress', JSON.stringify(checkState));
+  
+  // 2. Guardar en Nube (Si hay conexión)
   if(window.CHECKS_REF) {
     window.CHECKS_REF.set(checkState).then(() => {
-       if(dot){dot.classList.add('status-on');txt.textContent='Nube Sincronizada';}
+       if(dot){dot.classList.add('status-on');txt.textContent='Sincronizado';}
     }).catch(err => {
-       console.warn("Fallo guardado en nube:", err);
-       if(dot){dot.classList.add('status-off');txt.textContent='Error de Red';}
+       console.warn("Fallo nube:", err);
+       if(dot){dot.classList.add('status-off');txt.textContent='Modo Offline';}
     });
   }
-  // 2. Guardar en Local (Respaldo)
-  localStorage.setItem('ghk_progress', JSON.stringify(checkState));
+}
+
+function exportData() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(checkState));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "respaldo_auditoria_ghk.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      checkState = imported;
+      saveState();
+      onAreaChange(document.getElementById('masterSelect').value);
+      alert("✅ Progreso cargado correctamente.");
+    } catch (err) {
+      alert("❌ Error: El archivo no es válido.");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function setEval(key, value) {
