@@ -443,7 +443,7 @@ function downloadReport() {
   csv += '--- DETALLE MAESTRO DE EVALUACIÓN ---\n';
   csv += 'AREA,PRACTICA,PARAMETRO,EVIDENCIA,ESTADO\n';
   validData.forEach(d => {
-    let key = d.practica + '|' + d.parametro;
+    let key = sanitizeKey(d.practica + "||" + d.parametro);
     let val = checkState[key] || '';
     let status = val === 'C' ? 'CUMPLE' : (val === 'NC' ? 'NO CUMPLE' : (val === 'NA' ? 'N/A' : 'PENDIENTE'));
     let row = [`"${d.responsable}"`,`"${d.practica}"`,`"${d.parametro.replace(/"/g, '""')}"`,`"${(d.evidencia || '').replace(/"/g, '""')}"`,`"${status}"`];
@@ -459,35 +459,18 @@ function downloadReport() {
 
 // ── MOTOR DASHBOARD ──────────
 function onAreaChange(area) {
-  const areaTag = document.getElementById('areaTag');
-  const gName = document.getElementById('gaugeAreaName');
-  const gPct = document.getElementById('gaugePct');
-  const color = area === 'ALL' ? '#E66E0A' : getColor(area);
-  
-  if(areaTag) {
-    areaTag.textContent = area === 'ALL' ? 'Todas las Áreas' : area;
-    areaTag.style.background = color;
-  }
-  if(gName) {
-    gName.textContent = area === 'ALL' ? 'Todas las áreas' : area;
-    gName.style.color = color;
+  const badge = document.getElementById('areaTag');
+  if(badge) {
+    badge.textContent = area === 'ALL' ? 'TODAS LAS ÁREAS' : area;
+    badge.style.background = area === 'ALL' ? '#E66E0A' : getColor(area);
   }
   
-  const counts = countByResponsable();
-  const areaTotal = area === 'ALL' ? TOTAL : (counts[area] || 0);
-  const weightPct = TOTAL > 0 ? (areaTotal / TOTAL) * 100 : 0;
+  // Actualizar KPI total
+  const count = area === 'ALL' ? validData.length : validData.filter(d => d.responsable === area).length;
+  document.getElementById('kpiTotal').textContent = count;
   
-  const kpiTotal = document.getElementById('kpiTotal');
-  if(kpiTotal) kpiTotal.textContent = areaTotal;
-
-  if(gPct) {
-    gPct.textContent = weightPct.toFixed(1) + '%';
-    gPct.style.color = color;
-  }
-  
-  drawWeightGauge(weightPct, color);
   renderMatrix(area);
-  updateCompletionChart();
+  updateAllCharts();
 }
 
 function renderMatrix(areaFilter) {
@@ -511,7 +494,6 @@ function renderMatrix(areaFilter) {
       <td>${d.evidencia || '—'}</td>
       <td><div class="eval-cell">${btnC}${btnNC}${btnNA}</div></td>`;
     
-    // Delegar el evento de clic de forma segura para evitar problemas con comillas
     tr.querySelectorAll('button').forEach(btn => {
       btn.onclick = function() {
         var k = this.getAttribute('data-key');
@@ -524,7 +506,6 @@ function renderMatrix(areaFilter) {
   });
 }
 
-// Función maestra para limpiar llaves de Firebase (prohíbe . $ # [ ] /)
 function sanitizeKey(str) {
   return encodeURIComponent(str).replace(/\./g, '%2E');
 }
@@ -533,17 +514,56 @@ function saveState() {
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
   
-  if (Object.keys(checkState).length === 0) return;
-
   localStorage.setItem('ghk_progress', JSON.stringify(checkState));
   
   if(window.CHECKS_REF) {
     window.CHECKS_REF.set(checkState).then(() => {
        if(dot){dot.classList.add('status-on');txt.textContent='📡 Sincronizado';}
     }).catch(err => {
-       console.error("Error crítico Firebase:", err);
        if(dot){dot.classList.add('status-off');txt.textContent='⚠️ Modo Local';}
     });
+  }
+}
+
+// Función maestra para actualizar TODA la visualización
+function updateAllCharts() {
+  try {
+    const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
+    const color = currentArea === 'ALL' ? '#E66E0A' : getColor(currentArea);
+
+    // 1. Matriz de Cumplimiento
+    var done = 0, total = 0;
+    validData.forEach(d => {
+      if (currentArea === 'ALL' || d.responsable === currentArea) {
+        var key = sanitizeKey(d.practica + "||" + d.parametro);
+        var val = checkState[key];
+        if (val !== 'NA') { 
+            total++; 
+            if (val === 'C') done++; 
+        }
+      }
+    });
+
+    // 2. Gráfico de Círculo (Avance Global)
+    var pct = total > 0 ? (done / total) * 100 : 0;
+    if(document.getElementById('compGlobalPct')) document.getElementById('compGlobalPct').textContent = pct.toFixed(1) + '%';
+    if(document.getElementById('compGlobalSub')) document.getElementById('compGlobalSub').textContent = done + ' de ' + total + ' cumplen (excluye N/A)';
+    drawCompGauge(pct, color);
+
+    // 3. Gráfico de Barras y Arco de Peso
+    if(typeof buildCharts === 'function') buildCharts();
+    
+    // Cálculo de peso por área (Arco)
+    const counts = countByResponsable();
+    const areaTotal = currentArea === 'ALL' ? validData.length : (counts[currentArea] || 0);
+    const weightPct = validData.length > 0 ? (areaTotal / validData.length) * 100 : 0;
+    
+    if(document.getElementById('gaugeAreaName')) document.getElementById('gaugeAreaName').textContent = currentArea === 'ALL' ? 'Todas las áreas' : currentArea;
+    if(document.getElementById('gaugePct')) document.getElementById('gaugePct').textContent = weightPct.toFixed(1) + '%';
+    drawWeightGauge(weightPct, color);
+
+  } catch (e) {
+    console.error("Error al actualizar gráficos:", e);
   }
 }
 
@@ -552,18 +572,16 @@ function exportData() {
     const dataStr = JSON.stringify(checkState, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", url);
-    downloadAnchorNode.setAttribute("download", "respaldo_auditoria_ghk.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "respaldo_auditoria_ghk.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    alert("✅ Archivo de respaldo creado con éxito.\nGuárdalo en un lugar seguro.");
+    alert("✅ Respaldo guardado con éxito.");
   } catch (e) {
-    alert("❌ Error al exportar: " + e.message);
+    alert("Error al exportar: " + e.message);
   }
 }
 
@@ -577,12 +595,10 @@ function importData(event) {
       const imported = JSON.parse(content);
       
       if (imported && typeof imported === 'object') {
-        // Mezclamos con el estado actual por seguridad
         checkState = Object.assign(checkState, imported);
         saveState();
-        renderMatrix();
-        updateCharts();
-        if(typeof buildCharts === 'function') buildCharts();
+        renderMatrix(document.getElementById('masterSelect').value);
+        updateAllCharts();
         alert("✅ ¡Éxito! Tu respaldo ha sido cargado y sincronizado.");
       } else {
         throw new Error("El archivo no tiene el formato correcto.");
@@ -604,24 +620,11 @@ function setEval(key, status) {
   saveState();
   const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
   renderMatrix(currentArea);
-  updateCompletionChart(); 
-  if(typeof buildCharts === 'function') buildCharts();
+  updateAllCharts(); 
 }
 
 function updateCompletionChart() {
-  var sel = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-  var done = 0, total = 0;
-  validData.forEach(d => {
-    if (sel === 'ALL' || d.responsable === sel) {
-      var key = sanitizeKey(d.practica + "||" + d.parametro);
-      var val = checkState[key];
-      if (val !== 'NA') { total++; if (val === 'C') done++; }
-    }
-  });
-  var pct = total > 0 ? (done / total) * 100 : 0;
-  document.getElementById('compGlobalPct').textContent = pct.toFixed(1) + '%';
-  document.getElementById('compGlobalSub').textContent = done + ' de ' + total + ' cumplen (excluye N/A)';
-  drawCompGauge(pct, sel === 'ALL' ? '#E66E0A' : getColor(sel));
+  updateAllCharts();
 }
 
 function drawCompGauge(pct, color) {
@@ -696,17 +699,11 @@ window.CHECKS_REF.on('value', function(snapshot) {
   }
   
   // REFRESH INMEDIATO Y AGRESIVO DE TODA LA UI
-  const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
-  console.log("Refrescando UI con área:", currentArea);
+  renderMatrix(document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL'); 
+  updateAllCharts();
   
-  // Forzamos el renderizado de todo
-  renderMatrix(); 
-  updateCharts();
-  if(typeof buildCharts === 'function') buildCharts();
-  
-  // Pequeño re-intento de seguridad para asegurar que los gráficos se dibujen bien
   setTimeout(() => {
-     updateCharts();
+     updateAllCharts();
   }, 500);
 
 }, function(error) {
