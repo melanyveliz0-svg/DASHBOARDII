@@ -604,7 +604,7 @@ function setEval(key, status) {
   saveState();
   const currentArea = document.getElementById('masterSelect') ? document.getElementById('masterSelect').value : 'ALL';
   renderMatrix(currentArea);
-  updateCharts(); 
+  updateCompletionChart(); 
   if(typeof buildCharts === 'function') buildCharts();
 }
 
