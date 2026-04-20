@@ -565,8 +565,22 @@ function updateAllCharts() {
 
     // 2. Gráfico de Círculo (Avance Global)
     var pct = total > 0 ? (done / total) * 100 : 0;
-    if(document.getElementById('compGlobalPct')) document.getElementById('compGlobalPct').textContent = pct.toFixed(1) + '%';
-    if(document.getElementById('compGlobalSub')) document.getElementById('compGlobalSub').textContent = done + ' de ' + total + ' cumplen (excluye N/A)';
+    const pctTxt = document.getElementById('compGlobalPct');
+    const labelTxt = document.getElementById('compGlobalLabel');
+    const subTxt = document.getElementById('compGlobalSub');
+
+    if(pctTxt) {
+      pctTxt.textContent = pct.toFixed(1) + '%';
+      pctTxt.style.color = color;
+    }
+    if(labelTxt) {
+      labelTxt.textContent = currentArea === 'ALL' ? 'AVANCE GLOBAL' : 'AVANCE ' + currentArea;
+      labelTxt.style.color = color;
+    }
+    if(subTxt) {
+      subTxt.textContent = done + ' de ' + total + ' cumplen (excluye N/A)';
+    }
+    
     drawCompGauge(pct, color);
 
     // 3. Gráfico de Barras y Arco de Peso
