@@ -381,11 +381,17 @@ function buildCharts() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       onClick: (e, elements) => {
+        const select = document.getElementById('masterSelect');
+        // Si el selector está bloqueado, no permitir filtrar por clic en otras áreas
+        if (select && select.disabled) return;
+
         if (elements.length > 0) {
           const index = elements[0].index;
           const area = labels[index];
-          const select = document.getElementById('masterSelect');
-          if (select) { select.value = area; onAreaChange(area); }
+          if (select) { 
+            select.value = area; 
+            onAreaChange(area); 
+          }
         }
       },
       scales: { x: { beginAtZero: true, grid: { display : false } } }
@@ -476,7 +482,11 @@ function onAreaChange(area) {
   
   // Actualizar KPI total
   const count = area === 'ALL' ? validData.length : validData.filter(d => d.responsable === area).length;
-  document.getElementById('kpiTotal').textContent = count;
+  const kpiTotal = document.getElementById('kpiTotal');
+  if(kpiTotal) {
+    kpiTotal.textContent = count;
+    kpiTotal.style.color = area === 'ALL' ? '#E66E0A' : getColor(area);
+  }
   
   renderMatrix(area);
   updateAllCharts();
