@@ -441,7 +441,7 @@ function downloadReport() {
   });
 
   Object.entries(areas).forEach(([name, s]) => {
-    let base = s.c + s.nc;
+    let base = s.t - s.na;
     let pct = base > 0 ? (s.c / base) * 100 : 0;
     csv += `"${name}",${pct.toFixed(1)}%,${s.c},${s.nc},${s.na},${s.p},${s.t}\n`;
   });
